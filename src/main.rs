@@ -78,6 +78,10 @@ struct Opt {
     /// Label selector to filter on, supports '=', '==', and '!='. (e.g. -l key1=value1,key2=value2).
     #[structopt(long, short = "l", env)]
     selector: Option<String>,
+    
+    /// Title for the diff preview
+    #[structopt(long, default_value = "Argo CD Diff Preview", env)]
+    title: String,
 }
 
 #[derive(Debug)]

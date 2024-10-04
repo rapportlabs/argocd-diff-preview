@@ -11,6 +11,7 @@ pub async fn generate_diff(
     diff_ignore: Option<String>,
     line_count: Option<usize>,
     max_char_count: Option<usize>,
+    title: &str, // Add title parameter
 ) -> Result<(), Box<dyn Error>> {
     let max_diff_message_char_count = max_char_count.unwrap_or(65536);
 
@@ -68,7 +69,7 @@ pub async fn generate_diff(
     let diff_as_string = parse_diff_output(run_command(diff_command, Some(output_folder)).await);
 
     let remaining_max_chars =
-        max_diff_message_char_count - markdown_template_length() - summary_as_string.len();
+        max_diff_message_char_count - markdown_template_length(title) - summary_as_string.len();
 
     let warning_message = &format!(
         "\n\n ⚠️⚠️⚠️ Diff is too long. Truncated to {} characters. This can be adjusted with the `--max-diff-length` flag",
@@ -88,7 +89,7 @@ pub async fn generate_diff(
         _ => return Err("Diff is too long and cannot be truncated. Increase the max length with `--max-diff-length`".into())
     };
 
-    let markdown = print_diff(&summary_as_string, &diff_truncated);
+    let markdown = print_diff(title, &summary_as_string, &diff_truncated); // Pass title to print_diff
 
     let markdown_path = format!("{}/diff.md", output_folder);
     fs::write(&markdown_path, markdown)?;
@@ -99,7 +100,7 @@ pub async fn generate_diff(
 }
 
 const MARKDOWN_TEMPLATE: &str = r#"
-## Argo CD Diff Preview
+## %title%
 
 Summary:
 ```bash
@@ -117,15 +118,17 @@ Summary:
 </details>
 "#;
 
-fn markdown_template_length() -> usize {
+fn markdown_template_length(title: &str) -> usize {
     MARKDOWN_TEMPLATE
+        .replace("%title%", title)
         .replace("%summary%", "")
         .replace("%diff%", "")
         .len()
 }
 
-fn print_diff(summary: &str, diff: &str) -> String {
+fn print_diff(title: &str, summary: &str, diff: &str) -> String {
     MARKDOWN_TEMPLATE
+        .replace("%title%", title) // Replace %title% with the actual title
         .replace("%summary%", summary)
         .replace("%diff%", diff)
         .trim_start()
